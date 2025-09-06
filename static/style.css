@@ -1,0 +1,27 @@
+.section {
+    display: none;
+    margin-top: 20px;
+}
+.active-section {
+    display: block;
+}
+.nav-tabs .nav-link.active {
+    font-weight: bold;
+}
+.operation-panel {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+.table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    display: none;
+}

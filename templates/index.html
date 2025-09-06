@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医疗管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .section {
+            display: none;
+            margin-top: 20px;
+        }
+        .active-section {
+            display: block;
+        }
+        .nav-tabs .nav-link.active {
+            font-weight: bold;
+        }
+        .operation-panel {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            display: none;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center my-4">医疗管理系统</h1>
+                
+                <!-- 导航标签 -->
+                <ul class="nav nav-tabs" id="mainTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-section="drugs">药品管理</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="doctors">医生管理</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="prescriptions">处方管理</a>
+                    </li>
+                </ul>
+                
+                <!-- 通知区域 -->
+                <div class="alert alert-success notification" id="notification" role="alert"></div>
+                
+                <!-- 药品管理部分 -->
+                <div id="drugs" class="section active-section">
+                    <h2>药品管理</h2>
+                    
+                    <div class="operation-panel">
+                        <h4>添加药品</h4>
+                        <form id="addDrugForm">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" placeholder="药品名称" id="drugName" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="number" step="0.01" class="form-control" placeholder="价格" id="drugPrice" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="number" class="form-control" placeholder="库存" id="drugStock" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="submit" class="btn btn-primary">
+                                        <span id="addDrugSpinner" class="loading" style="display: none;"></span>
+                                        添加药品
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="operation-panel">
+                        <h4>修改药品信息</h4>
+                        <form id="updateDrugForm">
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <select class="form-select" id="updateDrugSelect" required>
+                                        <option value="">选择药品...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-8">
+                                    <button type="button" class="btn btn-info" id="loadDrugInfo">加载药品信息</button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <input type="number" step="0.01" class="form-control" placeholder="新价格" id="updateDrugPrice">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="number" class="form-control" placeholder="新库存" id="updateDrugStock">
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-warning">
+                                        <span id="updateDrugSpinner" class="loading" style="display: none;"></span>
+                                        更新药品
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="operation-panel">
+                        <h4>删除药品</h4>
+                        <form id="deleteDrugForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <select class="form-select" id="deleteDrugSelect" required>
+                                        <option value="">选择要删除的药品...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="submit" class="btn btn-danger">
+                                        <span id="deleteDrugSpinner" class="loading" style="display: none;"></span>
+                                        删除药品
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <h4>药品列表</h4>
+                    <div class="table-container">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>药品名称</th>
+                                    <th>价格</th>
+                                    <th>库存</th>
+                                </tr>
+                            </thead>
+                            <tbody id="drugsList">
+                                <!-- 药品数据将在这里动态加载 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 医生管理部分 -->
+                <div id="doctors" class="section">
+                    <h2>医生管理</h2>
+                    
+                    <div class="operation-panel">
+                        <h4>添加医生</h4>
+                        <form id="addDoctorForm">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" placeholder="医生ID" id="doctorId" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" placeholder="医生姓名" id="doctorName" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        <span id="addDoctorSpinner" class="loading" style="display: none;"></span>
+                                        添加医生
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="operation-panel">
+                        <h4>修改医生信息</h4>
+                        <form id="updateDoctorForm">
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <select class="form-select" id="updateDoctorSelect" required>
+                                        <option value="">选择医生...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-8">
+                                    <button type="button" class="btn btn-info" id="loadDoctorInfo">加载医生信息</button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <input type="text" class="form-control" placeholder="新姓名" id="updateDoctorName">
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-warning">
+                                        <span id="updateDoctorSpinner" class="loading" style="display: none;"></span>
+                                        更新医生
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="operation-panel">
+                        <h4>删除医生</h4>
+                        <form id="deleteDoctorForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <select class="form-select" id="deleteDoctorSelect" required>
+                                        <option value="">选择要删除的医生...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="submit" class="btn btn-danger">
+                                        <span id="deleteDoctorSpinner" class="loading" style="display: none;"></span>
+                                        删除医生
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <h4>医生列表</h4>
+                    <div class="table-container">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>医生ID</th>
+                                    <th>医生姓名</th>
+                                </tr>
+                            </thead>
+                            <tbody id="doctorsList">
+                                <!-- 医生数据将在这里动态加载 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 处方管理部分 -->
+                <div id="prescriptions" class="section">
+                    <h2>处方管理</h2>
+                    
+                    <div class="operation-panel">
+                        <h4>创建处方</h4>
+                        <form id="createPrescriptionForm">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" placeholder="处方ID" id="prescriptionId" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-select" id="prescriptionDoctorSelect" required>
+                                        <option value="">选择医生...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        <span id="createPrescriptionSpinner" class="loading" style="display: none;"></span>
+                                        创建处方
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="operation-panel">
+                        <h4>添加处方明细</h4>
+                        <form id="addPrescriptionDetailForm">
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <select class="form-select" id="detailPrescriptionSelect" required>
+                                        <option value="">选择处方...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-select" id="detailDrugSelect" required>
+                                        <option value="">选择药品...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="number" class="form-control" placeholder="数量" id="detailQuantity" required min="1">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 offset-md-8">
+                                    <button type="submit" class="btn btn-success">
+                                        <span id="addDetailSpinner" class="loading" style="display: none;"></span>
+                                        添加明细
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="operation-panel">
+                        <h4>计算处方总费用</h4>
+                        <form id="calculatePrescriptionForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <select class="form-select" id="calculatePrescriptionSelect" required>
+                                        <option value="">选择处方...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="submit" class="btn btn-info">
+                                        <span id="calculateSpinner" class="loading" style="display: none;"></span>
+                                        计算总费用
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="operation-panel">
+                        <h4>删除处方</h4>
+                        <form id="deletePrescriptionForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <select class="form-select" id="deletePrescriptionSelect" required>
+                                        <option value="">选择要删除的处方...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="submit" class="btn btn-danger">
+                                        <span id="deletePrescriptionSpinner" class="loading" style="display: none;"></span>
+                                        删除处方
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <h4>处方列表</h4>
+                    <div class="table-container">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>处方ID</th>
+                                    <th>医生ID</th>
+                                    <th>总费用</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prescriptionsList">
+                                <!-- 处方数据将在这里动态加载 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="prescriptionDetailsSection" style="display: none;">
+                        <h4>处方明细</h4>
+                        <div class="table-container">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>药品名称</th>
+                                        <th>数量</th>
+                                        <th>单价</th>
+                                        <th>小计</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="prescriptionDetailsList">
+                                    <!-- 处方明细数据将在这里动态加载 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全局变量
+        let currentPrescriptionId = null;
+        
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化标签页切换
+            initTabs();
+            
+            // 加载初始数据
+            loadDrugs();
+            loadDoctors();
+            loadPrescriptions();
+            
+            // 设置表单提交事件
+            setupFormHandlers();
+        });
+        
+        // 初始化标签页切换
+        function initTabs() {
+            const tabs = document.querySelectorAll('#mainTabs .nav-link');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // 更新活动标签
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 显示对应部分
+                    const sectionId = this.getAttribute('data-section');
+                    document.querySelectorAll('.section').forEach(section => {
+                        section.classList.remove('active-section');
+                    });
+                    document.getElementById(sectionId).classList.add('active-section');
+                    
+                    // 如果切换到处方管理，刷新下拉菜单
+                    if (sectionId === 'prescriptions') {
+                        refreshPrescriptionDropdowns();
+                    }
+                });
+            });
+        }
+        
+        // 设置表单提交事件处理
+        function setupFormHandlers() {
+            // 药品表单
+            document.getElementById('addDrugForm').addEventListener('submit', handleAddDrug);
+            document.getElementById('updateDrugForm').addEventListener('submit', handleUpdateDrug);
+            document.getElementById('deleteDrugForm').addEventListener('submit', handleDeleteDrug);
+            document.getElementById('loadDrugInfo').addEventListener('click', loadSelectedDrugInfo);
+            
+            // 医生表单
+            document.getElementById('addDoctorForm').addEventListener('submit', handleAddDoctor);
+            document.getElementById('updateDoctorForm').addEventListener('submit', handleUpdateDoctor);
+            document.getElementById('deleteDoctorForm').addEventListener('submit', handleDeleteDoctor);
+            document.getElementById('loadDoctorInfo').addEventListener('click', loadSelectedDoctorInfo);
+            
+            // 处方表单
+            document.getElementById('createPrescriptionForm').addEventListener('submit', handleCreatePrescription);
+            document.getElementById('addPrescriptionDetailForm').addEventListener('submit', handleAddPrescriptionDetail);
+            document.getElementById('calculatePrescriptionForm').addEventListener('submit', handleCalculatePrescription);
+            document.getElementById('deletePrescriptionForm').addEventListener('submit', handleDeletePrescription);
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `alert alert-${type} notification`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+        
+        // 显示加载动画
+        function showLoading(buttonId) {
+            const spinner = document.getElementById(buttonId);
+            if (spinner) {
+                spinner.style.display = 'inline-block';
+            }
+        }
+        
+        // 隐藏加载动画
+        function hideLoading(buttonId) {
+            const spinner = document.getElementById(buttonId);
+            if (spinner) {
+                spinner.style.display = 'none';
+            }
+        }
+        
+        // API调用函数
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            };
+            
+            if (data && (method === 'POST' || method === 'PUT')) {
+                options.body = JSON.stringify(data);
+            }
+            
+            try {
+                const response = await fetch(`/api/${endpoint}`, options);
+                
+                // 检查响应内容类型
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    // 如果不是JSON响应，获取文本内容
+                    const text = await response.text();
+                    throw new Error(`服务器返回了非JSON响应: ${text.substring(0, 100)}...`);
+                }
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || '请求失败');
+                }
+                
+                return result;
+            } catch (error) {
+                showNotification(`错误: ${error.message}`, 'danger');
+                throw error;
+            }
+        }
+        
+        // 药品相关功能
+        async function loadDrugs() {
+            try {
+                const drugs = await apiCall('drugs');
+                const drugsList = document.getElementById('drugsList');
+                const updateDrugSelect = document.getElementById('updateDrugSelect');
+                const deleteDrugSelect = document.getElementById('deleteDrugSelect');
+                const detailDrugSelect = document.getElementById('detailDrugSelect');
+                
+                // 清空现有选项，但保留第一个默认选项
+                while (drugsList.firstChild) {
+                    drugsList.removeChild(drugsList.firstChild);
+                }
+                
+                [updateDrugSelect, deleteDrugSelect, detailDrugSelect].forEach(select => {
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+                });
+                
+                // 添加新数据
+                drugs.forEach(drug => {
+                    // 添加到表格
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${drug.drug_name}</td>
+                        <td>${drug.price}</td>
+                        <td>${drug.stock}</td>
+                    `;
+                    drugsList.appendChild(row);
+                    
+                    // 添加到下拉菜单
+                    const option = document.createElement('option');
+                    option.value = drug.drug_name;
+                    option.textContent = `${drug.drug_name} (库存: ${drug.stock}, 价格: ${drug.price})`;
+                    
+                    updateDrugSelect.appendChild(option.cloneNode(true));
+                    deleteDrugSelect.appendChild(option.cloneNode(true));
+                    detailDrugSelect.appendChild(option.cloneNode(true));
+                });
+            } catch (error) {
+                console.error('加载药品失败:', error);
+            }
+        }
+        
+        async function handleAddDrug(e) {
+            e.preventDefault();
+            
+            const drugName = document.getElementById('drugName').value;
+            const drugPrice = parseFloat(document.getElementById('drugPrice').value);
+            const drugStock = parseInt(document.getElementById('drugStock').value);
+            
+            showLoading('addDrugSpinner');
+            
+            try {
+                await apiCall('drugs', 'POST', {
+                    drug_name: drugName,
+                    price: drugPrice,
+                    stock: drugStock
+                });
+                
+                showNotification('药品添加成功');
+                document.getElementById('addDrugForm').reset();
+                loadDrugs();
+            } catch (error) {
+                console.error('添加药品失败:', error);
+            } finally {
+                hideLoading('addDrugSpinner');
+            }
+        }
+        
+        async function loadSelectedDrugInfo() {
+            const drugName = document.getElementById('updateDrugSelect').value;
+            
+            if (!drugName) {
+                showNotification('请选择药品', 'warning');
+                return;
+            }
+            
+            try {
+                const drug = await apiCall(`drugs/${encodeURIComponent(drugName)}`);
+                
+                document.getElementById('updateDrugPrice').value = drug.price;
+                document.getElementById('updateDrugStock').value = drug.stock;
+                
+                showNotification('药品信息加载成功');
+            } catch (error) {
+                console.error('加载药品信息失败:', error);
+            }
+        }
+        
+        async function handleUpdateDrug(e) {
+            e.preventDefault();
+            
+            const drugName = document.getElementById('updateDrugSelect').value;
+            const newPrice = document.getElementById('updateDrugPrice').value;
+            const newStock = document.getElementById('updateDrugStock').value;
+            
+            if (!drugName) {
+                showNotification('请选择药品', 'warning');
+                return;
+            }
+            
+            const updateData = {};
+            if (newPrice) updateData.price = parseFloat(newPrice);
+            if (newStock) updateData.stock = parseInt(newStock);
+            
+            if (Object.keys(updateData).length === 0) {
+                showNotification('请提供要更新的信息', 'warning');
+                return;
+            }
+            
+            showLoading('updateDrugSpinner');
+            
+            try {
+                await apiCall(`drugs/${encodeURIComponent(drugName)}`, 'PUT', updateData);
+                
+                showNotification('药品信息更新成功');
+                document.getElementById('updateDrugForm').reset();
+                loadDrugs();
+            } catch (error) {
+                console.error('更新药品失败:', error);
+            } finally {
+                hideLoading('updateDrugSpinner');
+            }
+        }
+        
+        async function handleDeleteDrug(e) {
+            e.preventDefault();
+            
+            const drugName = document.getElementById('deleteDrugSelect').value;
+            
+            if (!drugName) {
+                showNotification('请选择药品', 'warning');
+                return;
+            }
+            
+            if (!confirm(`确定要删除药品 "${drugName}" 吗？`)) {
+                return;
+            }
+            
+            showLoading('deleteDrugSpinner');
+            
+            try {
+                const result = await apiCall(`drugs/${encodeURIComponent(drugName)}`, 'DELETE');
+                
+                if (result.error && result.detail_count) {
+                    // 如果有关联的处方明细，显示更详细的错误信息
+                    showNotification(`无法删除药品: ${result.error} (关联处方明细数: ${result.detail_count})`, 'danger');
+                } else if (result.error) {
+                    // 其他错误
+                    showNotification(`删除失败: ${result.error}`, 'danger');
+                } else {
+                    // 成功删除
+                    showNotification('药品删除成功');
+                    document.getElementById('deleteDrugForm').reset();
+                    loadDrugs();
+                }
+            } catch (error) {
+                console.error('删除药品失败:', error);
+            } finally {
+                hideLoading('deleteDrugSpinner');
+            }
+        }
+        
+        // 医生相关功能
+        async function loadDoctors() {
+            try {
+                const doctors = await apiCall('doctors');
+                const doctorsList = document.getElementById('doctorsList');
+                const updateDoctorSelect = document.getElementById('updateDoctorSelect');
+                const deleteDoctorSelect = document.getElementById('deleteDoctorSelect');
+                const prescriptionDoctorSelect = document.getElementById('prescriptionDoctorSelect');
+                
+                // 清空现有选项，但保留第一个默认选项
+                while (doctorsList.firstChild) {
+                    doctorsList.removeChild(doctorsList.firstChild);
+                }
+                
+                [updateDoctorSelect, deleteDoctorSelect, prescriptionDoctorSelect].forEach(select => {
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+                });
+                
+                // 添加新数据
+                doctors.forEach(doctor => {
+                    // 添加到表格
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${doctor.doctor_id}</td>
+                        <td>${doctor.doctor_name}</td>
+                    `;
+                    doctorsList.appendChild(row);
+                    
+                    // 添加到下拉菜单
+                    const option = document.createElement('option');
+                    option.value = doctor.doctor_id;
+                    option.textContent = `${doctor.doctor_name} (ID: ${doctor.doctor_id})`;
+                    
+                    updateDoctorSelect.appendChild(option.cloneNode(true));
+                    deleteDoctorSelect.appendChild(option.cloneNode(true));
+                    prescriptionDoctorSelect.appendChild(option.cloneNode(true));
+                });
+            } catch (error) {
+                console.error('加载医生失败:', error);
+            }
+        }
+        
+        async function handleAddDoctor(e) {
+            e.preventDefault();
+            
+            const doctorId = document.getElementById('doctorId').value;
+            const doctorName = document.getElementById('doctorName').value;
+            
+            showLoading('addDoctorSpinner');
+            
+            try {
+                await apiCall('doctors', 'POST', {
+                    doctor_id: doctorId,
+                    doctor_name: doctorName
+                });
+                
+                showNotification('医生添加成功');
+                document.getElementById('addDoctorForm').reset();
+                loadDoctors();
+            } catch (error) {
+                console.error('添加医生失败:', error);
+            } finally {
+                hideLoading('addDoctorSpinner');
+            }
+        }
+        
+        async function loadSelectedDoctorInfo() {
+            const doctorId = document.getElementById('updateDoctorSelect').value;
+            
+            if (!doctorId) {
+                showNotification('请选择医生', 'warning');
+                return;
+            }
+            
+            try {
+                const doctor = await apiCall(`doctors/${encodeURIComponent(doctorId)}`);
+                
+                document.getElementById('updateDoctorName').value = doctor.doctor_name;
+                
+                showNotification('医生信息加载成功');
+            } catch (error) {
+                console.error('加载医生信息失败:', error);
+            }
+        }
+        
+        async function handleUpdateDoctor(e) {
+            e.preventDefault();
+            
+            const doctorId = document.getElementById('updateDoctorSelect').value;
+            const newName = document.getElementById('updateDoctorName').value;
+            
+            if (!doctorId) {
+                showNotification('请选择医生', 'warning');
+                return;
+            }
+            
+            if (!newName) {
+                showNotification('请提供新姓名', 'warning');
+                return;
+            }
+            
+            showLoading('updateDoctorSpinner');
+            
+            try {
+                await apiCall(`doctors/${encodeURIComponent(doctorId)}`, 'PUT', {
+                    doctor_name: newName
+                });
+                
+                showNotification('医生信息更新成功');
+                document.getElementById('updateDoctorForm').reset();
+                loadDoctors();
+            } catch (error) {
+                console.error('更新医生失败:', error);
+            } finally {
+                hideLoading('updateDoctorSpinner');
+            }
+        }
+        
+        async function handleDeleteDoctor(e) {
+            e.preventDefault();
+            
+            const doctorId = document.getElementById('deleteDoctorSelect').value;
+            
+            if (!doctorId) {
+                showNotification('请选择医生', 'warning');
+                return;
+            }
+            
+            if (!confirm(`确定要删除医生 "${doctorId}" 吗？`)) {
+                return;
+            }
+            
+            showLoading('deleteDoctorSpinner');
+            
+            try {
+                const result = await apiCall(`doctors/${encodeURIComponent(doctorId)}`, 'DELETE');
+                
+                if (result.error && result.prescription_count) {
+                    // 如果有关联的处方，显示更详细的错误信息
+                    showNotification(`无法删除医生: ${result.error} (关联处方数: ${result.prescription_count})`, 'danger');
+                } else if (result.error) {
+                    // 其他错误
+                    showNotification(`删除失败: ${result.error}`, 'danger');
+                } else {
+                    // 成功删除
+                    showNotification('医生删除成功');
+                    document.getElementById('deleteDoctorForm').reset();
+                    loadDoctors();
+                }
+            } catch (error) {
+                console.error('删除医生失败:', error);
+            } finally {
+                hideLoading('deleteDoctorSpinner');
+            }
+        }
+        
+        // 处方相关功能
+        async function loadPrescriptions() {
+            try {
+                const prescriptions = await apiCall('prescriptions');
+                const prescriptionsList = document.getElementById('prescriptionsList');
+                
+                // 清空现有选项
+                while (prescriptionsList.firstChild) {
+                    prescriptionsList.removeChild(prescriptionsList.firstChild);
+                }
+                
+                // 添加新数据
+                prescriptions.forEach(prescription => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${prescription.prescription_id}</td>
+                        <td>${prescription.doctor_id}</td>
+                        <td>${prescription.total_fee || '未计算'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info view-details" data-id="${prescription.prescription_id}">查看明细</button>
+                        </td>
+                    `;
+                    prescriptionsList.appendChild(row);
+                });
+                
+                // 添加查看明细事件监听
+                document.querySelectorAll('.view-details').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const prescriptionId = this.getAttribute('data-id');
+                        viewPrescriptionDetails(prescriptionId);
+                    });
+                });
+            } catch (error) {
+                console.error('加载处方失败:', error);
+            }
+        }
+        
+        function refreshPrescriptionDropdowns() {
+            // 刷新所有处方相关的下拉菜单
+            loadPrescriptionsForDropdown('detailPrescriptionSelect');
+            loadPrescriptionsForDropdown('calculatePrescriptionSelect');
+            loadPrescriptionsForDropdown('deletePrescriptionSelect');
+        }
+        
+        async function loadPrescriptionsForDropdown(dropdownId) {
+            try {
+                const prescriptions = await apiCall('prescriptions');
+                const dropdown = document.getElementById(dropdownId);
+                
+                // 清空现有选项，但保留第一个默认选项
+                while (dropdown.options.length > 1) {
+                    dropdown.remove(1);
+                }
+                
+                // 添加新选项
+                prescriptions.forEach(prescription => {
+                    const option = document.createElement('option');
+                    option.value = prescription.prescription_id;
+                    option.textContent = `${prescription.prescription_id} (医生: ${prescription.doctor_id})`;
+                    dropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error('加载处方下拉菜单失败:', error);
+            }
+        }
+        
+        async function handleCreatePrescription(e) {
+            e.preventDefault();
+            
+            const prescriptionId = document.getElementById('prescriptionId').value;
+            const doctorId = document.getElementById('prescriptionDoctorSelect').value;
+            
+            if (!prescriptionId) {
+                showNotification('请输入处方ID', 'warning');
+                return;
+            }
+            
+            if (!doctorId) {
+                showNotification('请选择医生', 'warning');
+                return;
+            }
+            
+            showLoading('createPrescriptionSpinner');
+            
+            try {
+                await apiCall('prescriptions', 'POST', {
+                    prescription_id: prescriptionId,
+                    doctor_id: doctorId
+                });
+                
+                showNotification('处方创建成功');
+                document.getElementById('createPrescriptionForm').reset();
+                refreshPrescriptionDropdowns();
+                loadPrescriptions();
+            } catch (error) {
+                console.error('创建处方失败:', error);
+            } finally {
+                hideLoading('createPrescriptionSpinner');
+            }
+        }
+        
+        async function handleAddPrescriptionDetail(e) {
+            e.preventDefault();
+            
+            const prescriptionId = document.getElementById('detailPrescriptionSelect').value;
+            const drugName = document.getElementById('detailDrugSelect').value;
+            const quantity = parseInt(document.getElementById('detailQuantity').value);
+            
+            if (!prescriptionId) {
+                showNotification('请选择处方', 'warning');
+                return;
+            }
+            
+            if (!drugName) {
+                showNotification('请选择药品', 'warning');
+                return;
+            }
+            
+            if (!quantity || quantity <= 0) {
+                showNotification('请输入有效的数量', 'warning');
+                return;
+            }
+            
+            showLoading('addDetailSpinner');
+            
+            try {
+                await apiCall(`prescriptions/${prescriptionId}/details`, 'POST', {
+                    drug_name: drugName,
+                    quantity: quantity
+                });
+                
+                showNotification('处方明细添加成功');
+                document.getElementById('addPrescriptionDetailForm').reset();
+                // 刷新药品列表以更新库存
+                loadDrugs();
+            } catch (error) {
+                console.error('添加处方明细失败:', error);
+            } finally {
+                hideLoading('addDetailSpinner');
+            }
+        }
+        
+        async function handleCalculatePrescription(e) {
+            e.preventDefault();
+            
+            const prescriptionId = document.getElementById('calculatePrescriptionSelect').value;
+            
+            if (!prescriptionId) {
+                showNotification('请选择处方', 'warning');
+                return;
+            }
+            
+            showLoading('calculateSpinner');
+            
+            try {
+                const result = await apiCall(`prescriptions/${prescriptionId}/calculate`, 'POST');
+                
+                showNotification(`处方总费用计算成功: ${result.total_fee}`);
+                loadPrescriptions();
+            } catch (error) {
+                console.error('计算处方费用失败:', error);
+            } finally {
+                hideLoading('calculateSpinner');
+            }
+        }
+        
+        async function handleDeletePrescription(e) {
+            e.preventDefault();
+            
+            const prescriptionId = document.getElementById('deletePrescriptionSelect').value;
+            
+            if (!prescriptionId) {
+                showNotification('请选择处方', 'warning');
+                return;
+            }
+            
+            if (!confirm(`确定要删除处方 "${prescriptionId}" 吗？`)) {
+                return;
+            }
+            
+            showLoading('deletePrescriptionSpinner');
+            
+            try {
+                await apiCall(`prescriptions/${prescriptionId}`, 'DELETE');
+                
+                showNotification('处方删除成功');
+                document.getElementById('deletePrescriptionForm').reset();
+                refreshPrescriptionDropdowns();
+                loadPrescriptions();
+                
+                // 如果当前查看的处方被删除，隐藏明细区域
+                if (currentPrescriptionId === prescriptionId) {
+                    document.getElementById('prescriptionDetailsSection').style.display = 'none';
+                    currentPrescriptionId = null;
+                }
+            } catch (error) {
+                console.error('删除处方失败:', error);
+            } finally {
+                hideLoading('deletePrescriptionSpinner');
+            }
+        }
+        
+        async function viewPrescriptionDetails(prescriptionId) {
+            try {
+                const details = await apiCall(`prescriptions/${prescriptionId}/details`);
+                const detailsList = document.getElementById('prescriptionDetailsList');
+                
+                // 清空现有内容
+                while (detailsList.firstChild) {
+                    detailsList.removeChild(detailsList.firstChild);
+                }
+                
+                // 添加新数据
+                details.forEach(detail => {
+                    const row = document.createElement('tr');
+                    const subtotal = detail.quantity * detail.price;
+                    
+                    row.innerHTML = `
+                        <td>${detail.drug_name}</td>
+                        <td>${detail.quantity}</td>
+                        <td>${detail.price}</td>
+                        <td>${subtotal.toFixed(2)}</td>
+                    `;
+                    detailsList.appendChild(row);
+                });
+                
+                // 显示明细区域
+                document.getElementById('prescriptionDetailsSection').style.display = 'block';
+                currentPrescriptionId = prescriptionId;
+                
+                // 滚动到明细区域
+                document.getElementById('prescriptionDetailsSection').scrollIntoView({
+                    behavior: 'smooth'
+                });
+            } catch (error) {
+                console.error('加载处方明细失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>
